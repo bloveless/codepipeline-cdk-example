@@ -41,7 +41,7 @@ export class CodepipelineCdkStack extends cdk.Stack {
                     value: 'dev',
                 },
                 AWS_REGION: {
-                    value: new cdk.CfnReference('AWS::Region'),
+                    value: 'us-west-2',
                 }
             },
         });
