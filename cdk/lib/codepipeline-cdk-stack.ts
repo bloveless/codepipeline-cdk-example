@@ -36,6 +36,14 @@ export class CodepipelineCdkStack extends cdk.Stack {
             environment: {
                 buildImage: LinuxBuildImage.UBUNTU_14_04_NODEJS_10_1_0,
             },
+            environmentVariables: {
+                AWS_ENV: {
+                    value: 'dev',
+                },
+                AWS_REGION: {
+                    value: new cdk.CfnReference('AWS::Region'),
+                }
+            },
         });
 
         // Give access to serverless s3 deployment bucket.

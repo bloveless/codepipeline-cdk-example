@@ -7,7 +7,6 @@ phases:
   build:
     commands:
       - cd app
-      - npm ci
       - export SLS_DEBUG="*"
       - export AWSJS_DEBUG="*"
       - serverless deploy --verbose --region ${AWS_REGION} --environment ${AWS_ENV}
