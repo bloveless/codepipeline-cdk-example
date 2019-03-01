@@ -58,6 +58,7 @@ export class CodepipelineCdkStack extends cdk.Stack {
             .addAction('cloudformation:ValidateTemplate'));
 
         // Give permission to do whatever, because I ran out of time.
+        // TODO: Sorry about this Vince and James :S
         buildRole.addToPolicy(new PolicyStatement()
             .addAllResources()
             .addAction('apigateway:*')
