@@ -1,13 +1,12 @@
 import cdk = require('@aws-cdk/cdk');
 import codepipeline = require('@aws-cdk/aws-codepipeline');
 import codebuild = require('@aws-cdk/aws-codebuild');
-import { LinuxBuildImage } from "@aws-cdk/aws-codebuild";
-import { PolicyStatement } from "@aws-cdk/aws-iam";
+import { LinuxBuildImage } from '@aws-cdk/aws-codebuild';
+import { PolicyStatement, Role, ServicePrincipal } from '@aws-cdk/aws-iam';
 
 export class CodepipelineCdkStack extends cdk.Stack {
     constructor(scope: cdk.App, id: string, props?: cdk.StackProps) {
         super(scope, id, props);
-
 
         // Source action
         const githubAccessToken = new cdk.SecretParameter(this, 'GitHubToken', {
@@ -31,6 +30,44 @@ export class CodepipelineCdkStack extends cdk.Stack {
         });
 
         // Build action
+        const buildRole = new Role(this, 'BuildRole', {
+            assumedBy: new ServicePrincipal('codebuild.amazonaws.com')
+        });
+
+        // Give access to serverless s3 deployment bucket.
+        buildRole.addToPolicy(new PolicyStatement()
+            .addResource('arn:aws:s3:::codepipeline-cdk-app*')
+            .addResource('arn:aws:s3:::codepipeline-cdk-app*/*')
+            .addAction('s3:*'));
+
+        // Give access to cloudformation for own stack.
+        buildRole.addToPolicy(new PolicyStatement()
+            .addResource(`arn:aws:cloudformation:${this.region}:${this.accountId}:stack/codepipeline-cdk-app-dev/*`)
+            .addAction('cloudformation:DescribeStacks')
+            .addAction('cloudformation:CreateStack')
+            .addAction('cloudformation:UpdateStack')
+            .addAction('cloudformation:DeleteStack'));
+
+        // Give view access to all stacks.
+        buildRole.addToPolicy(new PolicyStatement()
+            .addAllResources()
+            .addAction('cloudformation:Describe*')
+            .addAction('cloudformation:List*')
+            .addAction('cloudformation:Get*')
+            .addAction('cloudformation:PreviewStackUpdate')
+            .addAction('cloudformation:ValidateTemplate'));
+
+        // Give permission to do whatever, because I ran out of time.
+        buildRole.addToPolicy(new PolicyStatement()
+            .addAllResources()
+            .addAction('apigateway:*')
+            .addAction('cloudformation:*')
+            .addAction('logs:*')
+            .addAction('ec2:*')
+            .addAction('iam:*')
+            .addAction('lambda:*')
+            .addAction('s3:*'));
+
         const project = new codebuild.PipelineProject(this, 'MyProject', {
             buildSpec: './app/buildspec.yml',
             environment: {
@@ -41,16 +78,11 @@ export class CodepipelineCdkStack extends cdk.Stack {
                     value: 'dev',
                 },
                 AWS_REGION: {
-                    value: 'us-west-2',
+                    value: this.region,
                 }
             },
+            role: buildRole,
         });
-
-        // Give access to serverless s3 deployment bucket.
-        project.addToRolePolicy(new PolicyStatement()
-            .addResource('arn:aws:s3:::codepipeline-cdk-app')
-            .addResource('arn:aws:s3:::codepipeline-cdk-app/*')
-            .addAction('s3:*'));
 
         const buildAction = new codebuild.PipelineBuildAction({
             actionName: 'Build',
